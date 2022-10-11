@@ -1,0 +1,268 @@
+#!/bin/bash
+
+arg1=$1
+arg2=$2
+
+version1=1
+version2=2
+version3=0
+
+error="\e[41mERROR\e[0m"
+warn="\e[43mWARN \e[0m"
+messg="\e[44mMESSG\e[0m"
+donem="\e[42mDONE \e[0m"
+
+if [ "$arg1" == "" ]; then
+	echo "No arguments"
+	echo "Type xlpm --help for help"
+fi
+if [ "$arg1" == "--help" ]; then
+cat << EOF
+-i --install    Install package
+-r --remove     Remove package
+-I --info       About package
+-g --github     Install from GitHub
+   --version    Print version
+EOF
+fi
+
+version () {
+	echo "Version: $version1.$version2.$version3"
+}
+
+xlpminit () {
+	if [ "$USER" != "root" ]; then
+		echo -e "$error You must be root (you are $USER)"
+		echo -e "$messg Try to run: sudo xlpm --init"
+		exit
+	fi
+	sudo mkdir -p /etc/xlpm/packages
+	if [ "$(find /etc/xlpm/packages)" == "/etc/xlpm/packages" ]; then
+		echo -e "$donem XLPM initialized successfully"
+	else
+		echo -e "$error Could not init XLPM"
+	fi
+}
+
+installpkg () {
+	if [ "$USER" != "root" ]; then
+		echo -e "$error You must be root"
+		exit
+	fi
+	if [ "$arg2" == "" ]; then
+		echo No package selected
+		exit
+	fi
+	pkgfile=$(pwd)/$arg2
+	mkdir -p /tmp/xlpm/$arg2; cd /tmp/xlpm/$arg2
+	sudo unzip $pkgfile > /tmp/loghide
+	rm -f /tmp/loghide
+	pfolder=$(ls)
+	mv $pfolder $pfolder$(echo -up)
+	cd $pfolder$(echo -up)
+	for file in $(ls); do
+		mv $file ..
+	done
+	cd ..; rmdir $pfolder$(echo -up)
+	if [ "$(find /tmp/xlpm/$arg2/xlp_config.json)" != "/tmp/xlpm/$arg2/xlp_config.json" ]; then
+		cd ~
+		rm -rf /tmp/xlpm
+		echo -e "$error $arg2 does not have config file"
+		exit
+	fi
+	pkgnameraw=$(cat xlp_config.json | jq '.name')
+	pkgname=${pkgnameraw:1:-1}
+	pkgversionraw=$(cat xlp_config.json | jq '.version')
+	pkgversion=${pkgnameraw:1:-1}
+	rm /tmp/xlpm/$arg2/xlp_config.json
+	if [ "$USER" != "root" ]; then
+		cd ~
+		rm -rf /tmp/xlpm
+		echo -e "$error You must be root (you are $USER)"
+		echo -e "$error Try to run: sudo xlpm -i $arg2"
+		exit
+	fi
+	echo -e "$messg Unpacking $arg2..."
+	
+	hasafterinstall=0
+	if [ "$(ls | grep afterinstall)" == "afterinstall" ]; then
+		mkdir /tmp/xlpm-afterinstall
+		mv afterinstall /tmp/xlpm-afterinstall
+		hasafterinstall=1
+		echo -e "$messg This package has autorun file"
+	fi
+
+	echo -e "$messg Adding package to XLPM-config..."
+	config_exists="0"
+	for line in $(find /etc/xlpm/packages); do
+		if [ $line == "/etc/xlpm/packages" ]; then
+			config_exists="1"
+		fi
+	done
+	if [ "$config_exists" != "1" ]; then
+		echo -e "$error XLPM not initialized"
+		echo -e "$messg Try to run: sudo xlpm --init"
+		cd ~
+		rm -rf /tmp/xlpm
+		exit
+	fi
+	sudo ls -A > /etc/xlpm/packages/$pkgname
+	echo -e "$donem Package added to XLPM-config"
+
+	chmod +x /tmp/xlpm/$arg2/*
+	chmod u+x /tmp/xlpm/$arg2/*
+	sudo mv /tmp/xlpm/$arg2/* /bin
+	echo -e "$messg Checking package..."
+	pkgok="1"
+	for file in $(ls -A); do
+		if [ "$(find $file)" != "$file" ]; then
+			pkgok="0"
+		fi
+	done
+	if [ "$pkgok" == "0" ]; then
+		echo -e "$error Could not install $pkgname"
+		cd ~
+		rm -rf /tmp/xlpm
+		exit
+	fi
+	
+	if [ "$hasafterinstall" == "1" ]; then
+		echo -e "$messg Starting autorun file..."
+		bash /tmp/xlpm-afterinstall/afterinstall
+		rm -r /tmp/xlpm-afterinstall
+	fi
+	
+	echo -en "$donem Successfully installed "; echo $pkgname
+	cd ~
+	rm -rf /tmp/xlpm
+}
+
+removepkg () {
+	if [ "$USER" != "root" ]; then
+		echo -e "$error You must be root (you are $USER)"
+		echo -e "$messg Try to run: sudo xlpm -r $arg2"
+		exit
+	fi
+	find_package_text="/etc/xlpm/packages/$arg2"
+	if [ "$(find $find_package_text)" != "$find_package_text" ]; then
+		echo -e "$error Package $arg2 not found"
+		exit
+	fi
+	echo -e "$messg Removing package files..."
+	files=$(cat $find_package_text)
+	for file in $files; do
+		sudo rm /bin/$file
+	done
+	echo -e "$donem Package files removed"
+	echo -e "$messg Removing package from XLPM config..."
+	sudo rm -f $find_package_text
+	echo -e "$donem Package removed from XLPM config"
+	echo -e "$donem Package $arg2 removed successfully"
+}
+
+pkginfo () {
+	if [ "$arg2" == "" ]; then
+		cd ~
+		rm -rf /tmp/xlpm
+		echo -e "$error No file selected"
+		exit
+	fi
+	if [ "$(find $arg2)" != "$arg2" ]; then
+		cd ~
+		rm -rf /tmp/xlpm
+		echo -e "$error File not found"
+		exit
+	fi
+	pkgfile=$(pwd)/$arg2
+	mkdir -p /tmp/xlpm/$arg2; cd /tmp/xlpm/$arg2
+	unzip $pkgfile > /tmp/loghide
+	cd $(ls)
+	if [ "$(find xlp_config.json)" != "xlp_config.json" ]; then
+		echo -e "$error $arg2 does not has config file"
+		exit
+	fi
+	pkgnameraw=$(cat xlp_config.json | jq '.name')
+	pkgname=${pkgnameraw:1:-1}
+	pkgversionraw=$(cat xlp_config.json | jq '.version')
+	pkgversion=${pkgversionraw:1:-1}
+	echo -e "$messg Package name: $pkgname"
+	echo -e "$messg Package version: $pkgversion"
+	cd ~
+	rm -rf /tmp/xlpm
+	rm -r /tmp/loghide
+}
+
+buildpkg () {
+	if [ "$arg2" == "" ]; then
+		echo -e "$error Folder not selected"
+		exit
+	fi
+	if [ "$(find $arg2/xlp_config.json)" != "$arg2/xlp_config.json" ]; then
+		echo -e "$error Config file not found"
+		exit
+	fi
+	echo -e "$messg Building $arg2..."
+	zip -r $arg2.xlp $arg2 > /tmp/loghide
+	echo -e "$messg Checking result..."
+	if [ "$(find $arg2.xlp)" != "$arg2.xlp" ]; then
+		echo -e "$error Could not build package"
+		rm -f /tmp/loghide
+		exit
+	fi
+	echo -e "$donem Package built successfully"
+	rm -f /tmp/loghide
+}
+
+ghinstall () {
+	if [ "$USER" != "root" ]; then
+		echo -e "$error You must be root (you are $USER)"
+		echo -e "$messg Try to run: sudo xlpm -g $arg2"
+		exit
+	fi
+	if [ "$arg2" == "" ]; then
+		echo -e "$error No repository selected"
+		exit
+	fi
+	mkdir -p /tmp/xlpm-gh; cd /tmp/xlpm-gh
+	git clone https://github.com/$arg2 > /tmp/loghide
+	rm -f /tmp/loghide
+	if [ "$(ls)" == "" ]; then
+		cd ~
+		rm -rf /tmp/xlpm-gh
+		echo -e "$error Couldn't clone repository. Make sure that:"
+		echo -e "$error - Git is installed"
+		echo -e "$error - Repository exists on GitHub"
+	fi
+	echo -e "$donem Repository cloned successfully"
+	cd $(ls)
+	sudo xlpm -i app.xlp
+	cd ~
+	rm -rf /tmp/xlpm-gh
+}
+
+if [ "$1" == "--version" ]; then
+	version
+elif [ "$1" == "-i" ]; then
+	installpkg
+elif [ "$1" == "--install" ]; then
+	installpkg
+elif [ "$1" == "-r" ]; then
+	removepkg
+elif [ "$1" == "--remove" ]; then
+	removepkg
+elif [ "$1" == "-I" ]; then
+	pkginfo
+elif [ "$1" == "--info" ]; then
+	pkginfo
+elif [ "$1" == "--init" ]; then
+	xlpminit
+elif [ "$1" == "--build" ]; then
+	buildpkg
+elif [ "$1" == "-g" ]; then
+	ghinstall
+elif [ "$1" == "--github" ]; then
+	ghinstall
+else
+	echo -e "$error Unknown option"
+	echo -e "$error Type \e[1mxlpm --help\e[0m for help"
+fi

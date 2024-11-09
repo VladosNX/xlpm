@@ -14,23 +14,35 @@
     <a href="#removing_packages">Removing packages</a>
     <a href="#building_package">Building package</a>
     <div class="first-p"></div>
-    <h2 id="installation">Installation</h2>
-    <p>Visit <a href="download.html">downloads page</a> to download XLPM</p>
-    <h2 id="installing_packages">Installing packages</h2>
-    <p>To install package you need .xlp-file with program. After downloadig this file, run this command:</p>
-    <b>sudo xlpm -i [package]</b>
-    <p>This program must be runned with sudo. If it's not package won't be installed. If you runned this command without sudo
-        program can be not installed on the first try.
-    </p>
-    <h2 id="removing_packages">Removing packages</h2>
-    <p>If you want to remove package, run this command:</p>
-    <b>sudo xlpm -r [package-name]</b>
-    <p>You need to use package name, not package file.</p>
-    <h2 id="building_package">Building package</h2>
-    <p>Firt create directory with your program. Then create file <b>xpl_config.json</b> and write:</p>
-    <b>{"name":"package_name","version":"package_versison"}</b>
-    <p>Then run this command:</p>
-    <b>xlpm --build [directory]</b>
+    <div class="docs-card-parent">
+        <div class="docs-card">
+            <h2 id="installation">Installation</h2>
+            <p>Visit <a href="download.html">downloads page</a> to download XLPM</p>
+            <!-- <br><br><a class="button-style" href="/download.html">Visit downloads page</a> -->
+            <br><br><a href="download.html" class="button-style">Download XLPM</a>
+        </div>
+        <div class="docs-card">
+            <h2 id="installing_packages">Installing packages</h2>
+            <p>To install package you need .xlp-file with program. After downloadig this file, run this command:</p>
+            <b>sudo xlpm -i [package]</b>
+            <p>This program must be runned with sudo. If it's not package won't be installed. If you runned this command without sudo
+                program can be not installed on the first try.
+            </p>
+        </div>
+        <div class="docs-card">
+            <h2 id="removing_packages">Removing packages</h2>
+            <p>If you want to remove package, run this command:</p>
+            <b>sudo xlpm -r [package-name]</b>
+            <p>You need to use package name, not package file.</p>
+        </div>
+        <div class="docs-card">
+            <h2 id="building_package">Building package</h2>
+            <p>Firt create directory with your program. Then create file <b>xpl_config.json</b> and write:</p>
+            <b>{"name":"package_name","version":"package_versison"}</b>
+            <p>Then run this command:</p>
+            <b>xlpm --build [directory]</b>
+        </div>
+    </div>
     <div style="margin-bottom: 100px;"></div>
 </body>
 </html>

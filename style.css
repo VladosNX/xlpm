@@ -34,3 +34,23 @@ a {
 .flexel {
     flex: 0 0 auto;
 }
+
+.docs-card-parent {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.docs-card {
+    background-color: lightgray;
+    border-radius: 15px;
+    width: 45%;
+    flex: 0 0 auto;
+    margin: 15px;
+    padding: 15px;
+}
+
+.features-flexbox {
+    display: flex;
+    justify-content: center;
+}
